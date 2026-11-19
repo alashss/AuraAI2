@@ -22,7 +22,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         setupUI()
         checkOverlayPermission()
     }
@@ -32,15 +31,10 @@ class MainActivity : AppCompatActivity() {
             if (canDrawOverlays()) startOverlay()
             else requestOverlayPermission()
         }
-
-        binding.btnStop.setOnClickListener {
-            stopOverlay()
-        }
-
+        binding.btnStop.setOnClickListener { stopOverlay() }
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
-
         binding.cardProvider.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -84,11 +78,10 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Izin Overlay Dibutuhkan")
             .setMessage("AuraAI perlu izin 'Tampil di atas app lain' agar bubble bisa muncul saat kamu mengerjakan soal ujian.")
             .setPositiveButton("Buka Pengaturan") { _, _ ->
-                val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName")
+                startActivityForResult(
+                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")),
+                    REQUEST_OVERLAY
                 )
-                startActivityForResult(intent, REQUEST_OVERLAY)
             }
             .setNegativeButton("Batal", null)
             .show()
@@ -96,14 +89,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun startOverlay() {
         val intent = Intent(this, BubbleService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+            updateStatusRunning(true)
+            moveTaskToBack(true)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Gagal start: ${e.message}", Toast.LENGTH_SHORT).show()
         }
-        updateStatusRunning(true)
-        // Minimize ke belakang
-        moveTaskToBack(true)
     }
 
     private fun stopOverlay() {
@@ -111,6 +107,7 @@ class MainActivity : AppCompatActivity() {
         updateStatusRunning(false)
     }
 
+    @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_OVERLAY) {

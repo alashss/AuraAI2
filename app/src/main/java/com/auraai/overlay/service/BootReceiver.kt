@@ -10,7 +10,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             val prefs = context.getSharedPreferences("auraai_prefs", Context.MODE_PRIVATE)
             if (prefs.getBoolean("auto_start", false)) {
-                val serviceIntent = Intent(context, OverlayService::class.java)
+                val serviceIntent = Intent(context, BubbleService::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(serviceIntent)
                 } else {

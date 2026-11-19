@@ -25,23 +25,15 @@ class BubbleService : Service() {
     private var isPanelOpen = false
     private val handler = Handler(Looper.getMainLooper())
 
-    // Receiver untuk status dari AccessibilityService
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
             when (intent.action) {
-                "com.auraai.AURA_STATUS" -> {
-                    val status = intent.getStringExtra("status") ?: return
-                    updateStatus(status)
-                }
-                "com.auraai.AURA_QUESTION" -> {
-                    val q = intent.getStringExtra("question") ?: return
-                    val platform = intent.getStringExtra("platform") ?: ""
-                    showQuestion(q, platform)
-                }
-                "com.auraai.AURA_ANSWER" -> {
-                    val answer = intent.getStringExtra("answer") ?: return
-                    showAnswer(answer)
-                }
+                "com.auraai.AURA_STATUS"   -> updateStatus(intent.getStringExtra("status") ?: return)
+                "com.auraai.AURA_QUESTION" -> showQuestion(
+                    intent.getStringExtra("question") ?: return,
+                    intent.getStringExtra("platform") ?: ""
+                )
+                "com.auraai.AURA_ANSWER"   -> showAnswer(intent.getStringExtra("answer") ?: return)
             }
         }
     }
@@ -58,13 +50,17 @@ class BubbleService : Service() {
             addAction("com.auraai.AURA_QUESTION")
             addAction("com.auraai.AURA_ANSWER")
         }
-        registerReceiver(receiver, filter)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(receiver, filter)
+        }
         showBubble()
     }
 
     override fun onDestroy() {
         isRunning = false
-        unregisterReceiver(receiver)
+        try { unregisterReceiver(receiver) } catch (_: Exception) {}
         removeBubble()
         removePanel()
         super.onDestroy()
@@ -87,18 +83,25 @@ class BubbleService : Service() {
     }
 
     private fun buildNotif(): Notification {
-        val stopPi = PendingIntent.getService(this, 0,
+        val stopPi = PendingIntent.getService(
+            this, 0,
             Intent(this, BubbleService::class.java).apply { action = "STOP" },
-            PendingIntent.FLAG_IMMUTABLE)
-        val openPi = PendingIntent.getActivity(this, 0,
-            Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+            PendingIntent.FLAG_IMMUTABLE
+        )
+        val openPi = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE
+        )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("AuraAI Aktif")
             .setContentText("Tap bubble 🤖 untuk scan soal")
             .setSmallIcon(R.drawable.ic_notif)
             .setContentIntent(openPi)
             .addAction(0, "Stop", stopPi)
-            .setOngoing(true).setSilent(true).build()
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
     }
 
     // ── BUBBLE ────────────────────────────────────────────────────
@@ -122,29 +125,45 @@ class BubbleService : Service() {
         }
 
         setupDrag(bubbleView!!, p)
-        bubbleView!!.setOnClickListener { if (isPanelOpen) closePanel() else openPanel() }
-        wm.addView(bubbleView, p)
-        bubbleView!!.startAnimation(
-            AnimationUtils.loadAnimation(this, R.anim.bubble_pulse))
+        bubbleView!!.setOnClickListener {
+            if (isPanelOpen) closePanel() else openPanel()
+        }
+        try {
+            wm.addView(bubbleView, p)
+            bubbleView!!.startAnimation(AnimationUtils.loadAnimation(this, R.anim.bubble_pulse))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun setupDrag(v: View, p: WindowManager.LayoutParams) {
         var ix = 0; var iy = 0; var tx = 0f; var ty = 0f; var dragging = false
         v.setOnTouchListener { _, e ->
             when (e.action) {
-                MotionEvent.ACTION_DOWN -> { ix=p.x; iy=p.y; tx=e.rawX; ty=e.rawY; dragging=false; true }
-                MotionEvent.ACTION_MOVE -> {
-                    if (Math.abs(tx-e.rawX)>5||Math.abs(ty-e.rawY)>5) dragging=true
-                    p.x=ix+(tx-e.rawX).toInt(); p.y=iy+(e.rawY-ty).toInt()
-                    wm.updateViewLayout(v, p); true
+                MotionEvent.ACTION_DOWN -> {
+                    ix = p.x; iy = p.y; tx = e.rawX; ty = e.rawY; dragging = false; true
                 }
-                MotionEvent.ACTION_UP -> { if (!dragging) v.performClick(); true }
+                MotionEvent.ACTION_MOVE -> {
+                    if (Math.abs(tx - e.rawX) > 5 || Math.abs(ty - e.rawY) > 5) dragging = true
+                    p.x = ix + (tx - e.rawX).toInt()
+                    p.y = iy + (e.rawY - ty).toInt()
+                    try { wm.updateViewLayout(v, p) } catch (_: Exception) {}
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!dragging) v.performClick(); true
+                }
                 else -> false
             }
         }
     }
 
-    private fun removeBubble() { bubbleView?.let { wm.removeView(it); bubbleView=null } }
+    private fun removeBubble() {
+        bubbleView?.let {
+            try { wm.removeView(it) } catch (_: Exception) {}
+            bubbleView = null
+        }
+    }
 
     // ── PANEL ─────────────────────────────────────────────────────
     private fun openPanel() {
@@ -168,10 +187,17 @@ class BubbleService : Service() {
         ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = 60 }
 
         setupPanelUI()
-        wm.addView(panelView, p)
-        panelView!!.startAnimation(
-            TranslateAnimation(0f,0f,400f,0f).apply {
-                duration=220; interpolator=DecelerateInterpolator() })
+        try {
+            wm.addView(panelView, p)
+            panelView!!.startAnimation(
+                TranslateAnimation(0f, 0f, 400f, 0f).apply {
+                    duration = 220
+                    interpolator = DecelerateInterpolator()
+                }
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun setupPanelUI() {
@@ -183,12 +209,13 @@ class BubbleService : Service() {
         val switchAuto  = panel.findViewById<Switch>(R.id.switchAutoClick)
         val progressBar = panel.findViewById<ProgressBar>(R.id.progressBar)
 
-        // State awal
         switchAuto.isChecked = AuraAccessibilityService.autoClickEnabled
         switchAuto.setOnCheckedChangeListener { _, checked ->
             AuraAccessibilityService.autoClickEnabled = checked
-            tvStatus.text = if (checked) "Auto-click ON — scan otomatis saat soal berubah"
-            else "Auto-click OFF — tap Scan untuk jawab manual"
+            tvStatus.text = if (checked)
+                "Auto-click ON — scan otomatis saat soal berubah"
+            else
+                "Auto-click OFF — tap Scan untuk jawab manual"
         }
 
         panel.findViewById<Button>(R.id.btnScan).setOnClickListener {
@@ -208,26 +235,26 @@ class BubbleService : Service() {
 
     private fun updateStatus(status: String) {
         val panel = panelView ?: return
-        val tvStatus = panel.findViewById<TextView>(R.id.tvStatus) ?: return
-        val pb = panel.findViewById<ProgressBar>(R.id.progressBar)
-
         handler.post {
+            val tvStatus = panel.findViewById<TextView>(R.id.tvStatus) ?: return@post
+            val pb = panel.findViewById<ProgressBar>(R.id.progressBar)
             when {
-                status == "scanning"  -> { pb?.visibility=View.VISIBLE; tvStatus.text="🔍 Scanning soal..." }
-                status == "answering" -> { pb?.visibility=View.VISIBLE; tvStatus.text="🤖 AI sedang menjawab..." }
-                status == "done"      -> { pb?.visibility=View.GONE;    tvStatus.text="✅ Selesai" }
+                status == "scanning"  -> { pb?.visibility = View.VISIBLE; tvStatus.text = "🔍 Scanning soal..." }
+                status == "answering" -> { pb?.visibility = View.VISIBLE; tvStatus.text = "🤖 AI sedang menjawab..." }
+                status == "done"      -> { pb?.visibility = View.GONE;    tvStatus.text = "✅ Selesai" }
                 status == "connected" -> tvStatus.text = "✅ Accessibility aktif — siap scan"
+                status == "idle"      -> { pb?.visibility = View.GONE;    tvStatus.text = "Siap scan" }
                 status.startsWith("error:no_question") -> {
-                    pb?.visibility=View.GONE
-                    tvStatus.text="⚠ Soal tidak terdeteksi. Pastikan soal terlihat di layar."
+                    pb?.visibility = View.GONE
+                    tvStatus.text = "⚠ Soal tidak terdeteksi. Pastikan soal terlihat di layar."
                 }
                 status.startsWith("error:no_window") -> {
-                    pb?.visibility=View.GONE
-                    tvStatus.text="⚠ Tidak bisa baca layar. Buka app ujian dulu."
+                    pb?.visibility = View.GONE
+                    tvStatus.text = "⚠ Tidak bisa baca layar. Buka app ujian dulu."
                 }
                 status.startsWith("error:") -> {
-                    pb?.visibility=View.GONE
-                    tvStatus.text="❌ ${status.removePrefix("error:")}"
+                    pb?.visibility = View.GONE
+                    tvStatus.text = "❌ ${status.removePrefix("error:")}"
                 }
             }
         }
@@ -251,9 +278,10 @@ class BubbleService : Service() {
 
     private fun closePanel() {
         isPanelOpen = false
-        val anim = TranslateAnimation(0f,0f,0f,400f).apply {
-            duration=200; interpolator=AccelerateInterpolator()
-            setAnimationListener(object: Animation.AnimationListener {
+        val anim = TranslateAnimation(0f, 0f, 0f, 400f).apply {
+            duration = 200
+            interpolator = AccelerateInterpolator()
+            setAnimationListener(object : Animation.AnimationListener {
                 override fun onAnimationStart(a: Animation?) {}
                 override fun onAnimationRepeat(a: Animation?) {}
                 override fun onAnimationEnd(a: Animation?) { removePanel() }
@@ -263,6 +291,9 @@ class BubbleService : Service() {
     }
 
     private fun removePanel() {
-        panelView?.let { try { wm.removeView(it) } catch (_:Exception) {}; panelView=null }
+        panelView?.let {
+            try { wm.removeView(it) } catch (_: Exception) {}
+            panelView = null
+        }
     }
 }

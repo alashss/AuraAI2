@@ -14,7 +14,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AuraAI">
+        android:theme="@style/Theme.AuraAI"
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".ui.MainActivity"
@@ -40,7 +41,7 @@
                 android:value="ExamAssistant" />
         </service>
 
-        <!-- Accessibility service — bisa baca + klik semua app -->
+        <!-- Accessibility service -->
         <service
             android:name=".service.AuraAccessibilityService"
             android:exported="true"
@@ -54,7 +55,10 @@
                 android:resource="@xml/accessibility_config" />
         </service>
 
-        <receiver android:name=".service.BootReceiver" android:exported="false">
+        <!-- Boot receiver — tidak export, hanya terima BOOT_COMPLETED -->
+        <receiver
+            android:name=".service.BootReceiver"
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
