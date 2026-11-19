@@ -1,0 +1,87 @@
+name: Build & Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Accept Android Licenses
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
+
+      - name: Fix gradlew
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.6-bin.zip -O gradle.zip
+          unzip -q gradle.zip
+          ./gradle-8.6/bin/gradle wrapper --gradle-version 8.6
+          chmod +x gradlew
+
+      - name: Create gradle.properties
+        run: |
+          cat > gradle.properties << 'PROPS'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          kotlin.code.style=official
+          PROPS
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="2.0.0"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build Debug APK
+        run: |
+          unset ANDROID_HOME
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: |
+          mkdir -p artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             artifacts/AuraAI-v${{ steps.version.outputs.version }}.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "AuraAI v${{ steps.version.outputs.version }}"
+          body: |
+            ## 🤖 AuraAI v${{ steps.version.outputs.version }}
+
+            Floating AI bubble — scan soal otomatis, jawab sendiri, auto-klik jawaban.
+
+            ### Cara Pakai
+            1. Install APK → buka app → izinkan **Overlay**
+            2. Aktifkan **Accessibility Service** di Pengaturan → Aksesibilitas → AuraAI
+            3. Tap **Mulai Bubble** → buka app ujian (Wayground/Kahoot/GForm/ExamBrowser)
+            4. Tap bubble 🤖 → tap **Scan & Jawab**
+            5. Toggle **Auto-Click** untuk klik jawaban otomatis
+          files: artifacts/AuraAI-v${{ steps.version.outputs.version }}.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
