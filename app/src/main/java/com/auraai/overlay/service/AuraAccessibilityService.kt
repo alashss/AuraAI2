@@ -22,14 +22,12 @@ class AuraAccessibilityService : AccessibilityService() {
         var autoClickEnabled = false
         var isScanning = false
 
-        // dipanggil dari BubbleService saat user tap "Scan"
-        fun triggerScan() {
-            instance?.doScan()
-        }
+        fun triggerScan() { instance?.doScan(mode = "auto") }
     }
 
     private val handler = Handler(Looper.getMainLooper())
     private var lastScannedText = ""
+    private var debounceJob: Runnable? = null
 
     override fun onServiceConnected() {
         instance = this
@@ -42,19 +40,21 @@ class AuraAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // auto-scan saat konten window berubah (soal baru muncul)
-        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-            if (autoClickEnabled && !isScanning) {
-                handler.removeCallbacksAndMessages(null)
-                handler.postDelayed({ doScan() }, 800) // debounce 800ms
-            }
-        }
+        event ?: return
+        if (!autoClickEnabled || isScanning) return
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED &&
+            event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+
+        // Debounce 1.2s — tunggu layar stabil
+        debounceJob?.let { handler.removeCallbacks(it) }
+        debounceJob = Runnable { doScan(mode = "auto") }
+        handler.postDelayed(debounceJob!!, 1200)
     }
 
     override fun onInterrupt() {}
 
-    // ── SCAN UTAMA ───────────────────────────────────────────────
-    fun doScan() {
+    // ── SCAN ─────────────────────────────────────────────────────
+    fun doScan(mode: String = "auto") {
         if (isScanning) return
         isScanning = true
         broadcastStatus("scanning")
@@ -67,77 +67,84 @@ class AuraAccessibilityService : AccessibilityService() {
                     return@Thread
                 }
 
-                // Detect platform + ambil soal dari node tree
-                val examResult = ExamDetector.detect(root)
+                val exam = ExamDetector.detect(root)
 
-                if (examResult == null || examResult.questionText.isBlank()) {
+                if (exam == null || exam.questionText.isBlank()) {
                     isScanning = false
                     broadcastStatus("error:no_question")
                     return@Thread
                 }
 
-                // Kalau soal sama dengan scan terakhir dan auto-click off, skip
-                if (examResult.questionText == lastScannedText && !autoClickEnabled) {
+                // Jangan rescan soal yang sama kalau auto mode
+                if (mode == "auto" && exam.questionText == lastScannedText) {
                     isScanning = false
                     broadcastStatus("idle")
                     return@Thread
                 }
 
-                lastScannedText = examResult.questionText
-                broadcastQuestion(examResult.questionText, examResult.platform)
+                lastScannedText = exam.questionText
+                broadcastQuestion(exam.questionText, exam.platform)
                 broadcastStatus("answering")
 
-                // Tanya AI
                 val prefs = getSharedPreferences("auraai_prefs", MODE_PRIVATE)
-                val answer = ProviderManager.askExam(prefs, examResult)
+
+                // Build prompt sesuai mode
+                val answer = when (mode) {
+                    "explain" -> {
+                        val prompt = buildExplainPrompt(exam)
+                        ProviderManager.ask(prefs,
+                            com.auraai.overlay.ai.AiProvider.entries.firstOrNull {
+                                it.id == (prefs.getString("selected_provider", "auto") ?: "auto")
+                            } ?: com.auraai.overlay.ai.AiProvider.AUTO,
+                            prompt)
+                    }
+                    else -> ProviderManager.askExam(prefs, exam)
+                }
 
                 broadcastAnswer(answer)
 
-                // Auto-click kalau enabled
-                if (autoClickEnabled && examResult.optionNodes.isNotEmpty()) {
+                // Auto-click / auto-type
+                if (autoClickEnabled) {
                     handler.post {
-                        AnswerEngine.clickAnswer(this, examResult, answer)
+                        AnswerEngine.clickAnswer(this, exam, answer)
                     }
                 }
 
                 broadcastStatus("done")
             } catch (e: Exception) {
-                broadcastStatus("error:${e.message}")
+                broadcastStatus("error:${e.message?.take(60)}")
             } finally {
                 isScanning = false
             }
         }.start()
     }
 
-    // ── CLICK NODE ───────────────────────────────────────────────
+    fun doScanWithMode(mode: String) { doScan(mode) }
+
+    // ── ACTIONS ───────────────────────────────────────────────────
     fun clickNode(node: AccessibilityNodeInfo) {
-        // Coba performAction dulu
         if (node.isClickable) {
             node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             return
         }
-        // Kalau node bukan clickable, cari parent yang clickable
         var parent = node.parent
-        repeat(5) {
+        repeat(6) {
             if (parent?.isClickable == true) {
                 parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                 return
             }
             parent = parent?.parent
         }
-        // Fallback: gesture tap ke tengah bounds node
+        // Fallback gesture
         val bounds = Rect()
         node.getBoundsInScreen(bounds)
-        if (!bounds.isEmpty) {
-            tapAt(bounds.centerX().toFloat(), bounds.centerY().toFloat())
-        }
+        if (!bounds.isEmpty) tapAt(bounds.centerX().toFloat(), bounds.centerY().toFloat())
     }
 
     fun tapAt(x: Float, y: Float) {
         val path = Path().apply { moveTo(x, y) }
-        val stroke = GestureDescription.StrokeDescription(path, 0, 100)
-        val gesture = GestureDescription.Builder().addStroke(stroke).build()
-        dispatchGesture(gesture, null, null)
+        val stroke = GestureDescription.StrokeDescription(path, 0, 80)
+        dispatchGesture(GestureDescription.Builder().addStroke(stroke).build(), null, null)
     }
 
     fun typeText(node: AccessibilityNodeInfo, text: String) {
@@ -147,23 +154,26 @@ class AuraAccessibilityService : AccessibilityService() {
         node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
     }
 
-    // ── BROADCAST ke BubbleService ────────────────────────────────
-    private fun broadcastStatus(status: String) {
-        sendBroadcast(Intent("com.auraai.AURA_STATUS").apply {
-            putExtra("status", status)
-        })
+    // ── PROMPT BUILDERS ───────────────────────────────────────────
+    private fun buildExplainPrompt(exam: ExamResult): String {
+        val sb = StringBuilder()
+        sb.append("Soal: ${exam.questionText}\n")
+        if (exam.options.isNotEmpty()) {
+            sb.append("Pilihan:\n")
+            exam.options.forEachIndexed { i, opt -> sb.append("${('A' + i)}. $opt\n") }
+        }
+        sb.append("\nBerikan penjelasan lengkap step-by-step mengapa jawaban itu benar dalam Bahasa Indonesia.")
+        return sb.toString()
     }
 
-    private fun broadcastQuestion(question: String, platform: String) {
-        sendBroadcast(Intent("com.auraai.AURA_QUESTION").apply {
-            putExtra("question", question)
-            putExtra("platform", platform)
-        })
-    }
+    // ── BROADCAST ─────────────────────────────────────────────────
+    private fun broadcastStatus(status: String) =
+        sendBroadcast(Intent("com.auraai.AURA_STATUS").putExtra("status", status))
 
-    private fun broadcastAnswer(answer: String) {
-        sendBroadcast(Intent("com.auraai.AURA_ANSWER").apply {
-            putExtra("answer", answer)
-        })
-    }
+    private fun broadcastQuestion(q: String, platform: String) =
+        sendBroadcast(Intent("com.auraai.AURA_QUESTION")
+            .putExtra("question", q).putExtra("platform", platform))
+
+    private fun broadcastAnswer(a: String) =
+        sendBroadcast(Intent("com.auraai.AURA_ANSWER").putExtra("answer", a))
 }

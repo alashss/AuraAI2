@@ -1,15 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AuraAI</string>
-    <string name="accessibility_description">AuraAI membaca soal ujian di layar dan menjawab secara otomatis menggunakan AI.</string>
-    <string-array name="providers">
-        <item>Auto (Cascade)</item>
-        <item>Pollinations (Gratis, No Key)</item>
-        <item>Gemini Flash</item>
-        <item>Groq (Llama3)</item>
-        <item>Mistral</item>
-        <item>Cohere</item>
-        <item>Together AI</item>
-        <item>OpenAI</item>
-    </string-array>
+    <string name="accessibility_service_desc">AuraAI membaca soal ujian di layar dan menjawabnya secara otomatis menggunakan kecerdasan buatan.</string>
 </resources>

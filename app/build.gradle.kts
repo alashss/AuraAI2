@@ -12,7 +12,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = (System.getenv("BUILD_NUMBER") ?: "1").toInt()
-        versionName = System.getenv("RELEASE_VERSION") ?: "2.0.0"
+        versionName = System.getenv("RELEASE_VERSION") ?: "2.1.0"
     }
 
     buildTypes {
@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.androidx.cardview)
     implementation(libs.okhttp)
     implementation(libs.gson)
 }

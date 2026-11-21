@@ -1,0 +1,101 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="72"
+    android:viewportHeight="72">
+
+    <!-- Shadow -->
+    <path android:fillColor="#15000000"
+        android:pathData="M20,66 Q36,70 52,66 Q52,72 36,72 Q20,72 20,66Z"/>
+
+    <!-- Body - dark navy -->
+    <path android:fillColor="#1A1F3A"
+        android:pathData="M16,34 Q16,28 22,28 L50,28 Q56,28 56,34 L56,58 Q56,64 50,64 L22,64 Q16,64 16,58 Z"/>
+
+    <!-- Body highlight -->
+    <path android:fillColor="#252B50"
+        android:pathData="M20,32 Q20,30 22,30 L50,30 Q52,30 52,32 L52,42 L20,42 Z"/>
+
+    <!-- Head - dark navy -->
+    <path android:fillColor="#1A1F3A"
+        android:pathData="M18,14 Q18,8 24,8 L48,8 Q54,8 54,14 L54,30 Q54,36 48,36 L24,36 Q18,36 18,30 Z"/>
+
+    <!-- Head highlight -->
+    <path android:fillColor="#252B50"
+        android:pathData="M20,12 Q20,10 22,10 L50,10 Q52,10 52,12 L52,20 L20,20 Z"/>
+
+    <!-- Antenna -->
+    <path android:fillColor="#6C63FF"
+        android:pathData="M34,4 L38,4 L38,10 L34,10 Z"/>
+    <path android:fillColor="#6C63FF"
+        android:pathData="M32,2 Q36,0 40,2 Q40,6 36,6 Q32,6 32,2 Z"/>
+
+    <!-- Eyes - glowing blue -->
+    <path android:fillColor="#4FC3F7"
+        android:pathData="M24,16 Q24,13 27,13 L31,13 Q34,13 34,16 L34,22 Q34,25 31,25 L27,25 Q24,25 24,22 Z"/>
+    <path android:fillColor="#4FC3F7"
+        android:pathData="M38,16 Q38,13 41,13 L45,13 Q48,13 48,16 L48,22 Q48,25 45,25 L41,25 Q38,25 38,22 Z"/>
+
+    <!-- Eye shine -->
+    <path android:fillColor="#FFFFFF" android:pathData="M25,15 Q27,14 28,16 Q27,17 25,15Z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M39,15 Q41,14 42,16 Q41,17 39,15Z"/>
+
+    <!-- Mouth smile -->
+    <path android:fillColor="#6C63FF"
+        android:strokeColor="#6C63FF"
+        android:strokeWidth="2"
+        android:pathData="M26,30 Q36,35 46,30"/>
+
+    <!-- Collar/neck -->
+    <path android:fillColor="#6C63FF"
+        android:pathData="M28,36 L44,36 L46,42 L26,42 Z"/>
+
+    <!-- Chest screen -->
+    <path android:fillColor="#0D1226"
+        android:pathData="M22,44 Q22,42 24,42 L48,42 Q50,42 50,44 L50,56 Q50,58 48,58 L24,58 Q22,58 22,56 Z"/>
+
+    <!-- Screen text "AI" -->
+    <path android:fillColor="#6C63FF"
+        android:pathData="M30,47 L30,55 M27,47 L33,47 M27,51 L33,51"/>
+    <path android:fillColor="#6C63FF"
+        android:pathData="M36,47 Q40,47 40,51 Q40,55 36,55 L36,47 Z"/>
+
+    <!-- Ears/bolts -->
+    <path android:fillColor="#6C63FF"
+        android:pathData="M13,18 Q13,16 15,16 Q17,16 17,18 L17,24 Q17,26 15,26 Q13,26 13,24 Z"/>
+    <path android:fillColor="#6C63FF"
+        android:pathData="M55,18 Q55,16 57,16 Q59,16 59,18 L59,24 Q59,26 57,26 Q55,26 55,24 Z"/>
+
+    <!-- Arms -->
+    <path android:fillColor="#1A1F3A"
+        android:pathData="M10,36 Q8,36 8,38 L8,52 Q8,56 12,56 L18,56 L18,36 Z"/>
+    <path android:fillColor="#1A1F3A"
+        android:pathData="M54,36 L60,36 Q64,36 64,40 L64,52 Q64,56 60,56 L54,56 Z"/>
+
+    <!-- Hands -->
+    <path android:fillColor="#6C63FF"
+        android:pathData="M8,52 Q6,52 6,55 Q6,58 10,58 Q14,58 14,55 Q14,52 12,52 Z"/>
+    <path android:fillColor="#6C63FF"
+        android:pathData="M60,52 Q62,52 66,52 Q66,55 64,58 Q60,58 58,55 Q58,52 60,52 Z"/>
+
+    <!-- Book (held by right hand) -->
+    <path android:fillColor="#FF8A65"
+        android:pathData="M60,44 Q60,42 62,42 L70,42 Q72,42 72,44 L72,56 Q72,58 70,58 L60,58 Z"/>
+    <path android:fillColor="#FFCCBC"
+        android:pathData="M61,43 L71,43 L71,57 L61,57 Z"/>
+    <path android:fillColor="#FF8A65"
+        android:pathData="M65,43 L66,43 L66,57 L65,57 Z"/>
+
+    <!-- Legs -->
+    <path android:fillColor="#1A1F3A"
+        android:pathData="M24,64 L30,64 L30,70 Q30,72 27,72 Q24,72 24,70 Z"/>
+    <path android:fillColor="#1A1F3A"
+        android:pathData="M42,64 L48,64 L48,70 Q48,72 45,72 Q42,72 42,70 Z"/>
+
+    <!-- Feet -->
+    <path android:fillColor="#6C63FF"
+        android:pathData="M22,70 Q22,72 27,72 Q32,72 32,70 Q32,68 27,68 Q22,68 22,70 Z"/>
+    <path android:fillColor="#6C63FF"
+        android:pathData="M40,70 Q40,72 45,72 Q50,72 50,70 Q50,68 45,68 Q40,68 40,70 Z"/>
+
+</vector>
