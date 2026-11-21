@@ -135,7 +135,8 @@ class BubbleService : Service() {
 
         setupDrag(iv, params)
         iv.setOnClickListener {
-            if (isMenuOpen) closeMenu() else openMenu()
+            if (isMenuOpen) closeMenu()
+            else openMenu()
         }
 
         // Pulse animasi
@@ -363,20 +364,17 @@ class BubbleService : Service() {
     }
 
     private fun closeMenu() {
+        if (!isMenuOpen) return
         isMenuOpen = false
-        menuView?.let {
-            val anim = AlphaAnimation(1f, 0f).apply {
-                duration = 150
-                setAnimationListener(object : Animation.AnimationListener {
-                    override fun onAnimationStart(a: Animation?) {}
-                    override fun onAnimationRepeat(a: Animation?) {}
-                    override fun onAnimationEnd(a: Animation?) {
-                        try { wm.removeView(it) } catch (_: Exception) {}
-                        menuView = null
-                    }
-                })
-            }
-            it.startAnimation(anim)
+        val view = menuView ?: return
+        menuView = null
+        handler.post {
+            try {
+                view.clearAnimation()
+                wm.removeView(view)
+            } catch (_: Exception) {}
+        }
+        return
         }
     }
 
