@@ -11,4 +11,9 @@
     <color name="white">#FFFFFF</color>
     <color name="green">#4CAF50</color>
     <color name="red">#FF4444</color>
+
+    <!-- referenced by activity_settings dan ic_launcher -->
+    <color name="bg">#F5F5F5</color>
+    <color name="surface2">#FFFFFF</color>
+    <color name="accent_blue">#6C63FF</color>
 </resources>
