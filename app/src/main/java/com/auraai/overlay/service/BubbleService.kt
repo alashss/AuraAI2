@@ -362,10 +362,8 @@ class BubbleService : Service() {
                 }
             }
             webChromeClient = WebChromeClient()
-            CookieManager.getInstance().apply {
-                setAcceptCookie(true)
-                setAcceptThirdPartyCookies(this@apply, true)
-            }
+            CookieManager.getInstance().setAcceptCookie(true)
+            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
             )
