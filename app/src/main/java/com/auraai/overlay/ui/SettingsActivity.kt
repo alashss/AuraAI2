@@ -16,38 +16,31 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        supportActionBar?.apply { title = "Pengaturan AuraAI"; setDisplayHomeAsUpEnabled(true) }
 
-        supportActionBar?.apply {
-            title = "Pengaturan AuraAI"
-            setDisplayHomeAsUpEnabled(true)
-        }
-
-        // Setup spinner adapter
-        val providerNames = AiProvider.entries.map { it.displayName }
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, providerNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerProvider.adapter = adapter
+        val names = AiProvider.entries.map { it.displayName }
+        binding.spinnerProvider.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, names)
+            .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
 
         loadSettings()
         setupUI()
     }
 
     private fun loadSettings() {
-        val prefs = ProviderManager.getPrefs(this)
-        binding.etGeminiKey.setText(prefs.getString("key_gemini", ""))
-        binding.etGroqKey.setText(prefs.getString("key_groq", ""))
-        binding.etMistralKey.setText(prefs.getString("key_mistral", ""))
-        binding.etCohereKey.setText(prefs.getString("key_cohere", ""))
-        binding.etTogetherKey.setText(prefs.getString("key_together", ""))
-        binding.etOpenaiKey.setText(prefs.getString("key_openai", ""))
-
-        val provider = prefs.getString("selected_provider", "auto") ?: "auto"
-        val idx = AiProvider.entries.indexOfFirst { it.id == provider }.coerceAtLeast(0)
+        val p = ProviderManager.getPrefs(this)
+        binding.etGeminiKey.setText(p.getString("key_gemini", ""))
+        binding.etGroqKey.setText(p.getString("key_groq", ""))
+        binding.etMistralKey.setText(p.getString("key_mistral", ""))
+        binding.etCohereKey.setText(p.getString("key_cohere", ""))
+        binding.etTogetherKey.setText(p.getString("key_together", ""))
+        binding.etOpenaiKey.setText(p.getString("key_openai", ""))
+        binding.etDeepseekKey.setText(p.getString("key_deepseek", ""))
+        binding.etClaudeKey.setText(p.getString("key_claude", ""))
+        val idx = AiProvider.entries.indexOfFirst { it.id == (p.getString("selected_provider","auto") ?: "auto") }.coerceAtLeast(0)
         binding.spinnerProvider.setSelection(idx)
-
-        binding.etKkm.setText(prefs.getInt("kkm", 75).toString())
-        binding.switchStealth.isChecked = prefs.getBoolean("stealth_mode", false)
-        binding.switchBahasaIndo.isChecked = prefs.getBoolean("lang_id", true)
+        binding.etKkm.setText(p.getInt("kkm", 75).toString())
+        binding.switchStealth.isChecked = p.getBoolean("stealth_mode", false)
+        binding.switchBahasaIndo.isChecked = p.getBoolean("lang_id", true)
     }
 
     private fun setupUI() {
@@ -56,47 +49,34 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun saveSettings() {
-        val prefs = ProviderManager.getPrefs(this)
-        prefs.edit().apply {
+        val p = ProviderManager.getPrefs(this)
+        p.edit().apply {
             putString("key_gemini", binding.etGeminiKey.text.toString().trim())
             putString("key_groq", binding.etGroqKey.text.toString().trim())
             putString("key_mistral", binding.etMistralKey.text.toString().trim())
             putString("key_cohere", binding.etCohereKey.text.toString().trim())
             putString("key_together", binding.etTogetherKey.text.toString().trim())
             putString("key_openai", binding.etOpenaiKey.text.toString().trim())
-
-            val selectedProvider = AiProvider.entries[binding.spinnerProvider.selectedItemPosition]
-            putString("selected_provider", selectedProvider.id)
-
-            val kkm = binding.etKkm.text.toString().toIntOrNull() ?: 75
-            putInt("kkm", kkm.coerceIn(0, 100))
+            putString("key_deepseek", binding.etDeepseekKey.text.toString().trim())
+            putString("key_claude", binding.etClaudeKey.text.toString().trim())
+            putString("selected_provider", AiProvider.entries[binding.spinnerProvider.selectedItemPosition].id)
+            putInt("kkm", binding.etKkm.text.toString().toIntOrNull()?.coerceIn(0,100) ?: 75)
             putBoolean("stealth_mode", binding.switchStealth.isChecked)
             putBoolean("lang_id", binding.switchBahasaIndo.isChecked)
             apply()
         }
-        Toast.makeText(this, "Pengaturan disimpan ✓", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Disimpan ✓", Toast.LENGTH_SHORT).show()
     }
 
     private fun testProvider() {
-        Toast.makeText(this, "Testing provider...", Toast.LENGTH_SHORT).show()
-        val prefs = ProviderManager.getPrefs(this)
+        val p = ProviderManager.getPrefs(this)
         val provider = AiProvider.entries[binding.spinnerProvider.selectedItemPosition]
+        Toast.makeText(this, "Testing ${provider.displayName}...", Toast.LENGTH_SHORT).show()
         Thread {
-            try {
-                val result = ProviderManager.ask(prefs, provider, "Jawab: 1 + 1 = ?")
-                runOnUiThread {
-                    Toast.makeText(this, "✓ Hasil: $result", Toast.LENGTH_LONG).show()
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(this, "✗ Error: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-            }
+            val result = try { ProviderManager.ask(p, provider, "1 + 1 = ?") } catch (e: Exception) { "ERROR: ${e.message}" }
+            runOnUiThread { Toast.makeText(this, "✓ $result", Toast.LENGTH_LONG).show() }
         }.start()
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        onBackPressedDispatcher.onBackPressed()
-        return true
-    }
+    override fun onSupportNavigateUp(): Boolean { onBackPressedDispatcher.onBackPressed(); return true }
 }

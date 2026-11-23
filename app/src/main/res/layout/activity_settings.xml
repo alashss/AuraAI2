@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg">
+    android:background="#F5F5F5">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -10,119 +10,133 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Provider -->
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="API Keys (gratis, daftarkan dulu)" android:textSize="12sp"
-            android:textColor="@color/text_secondary" android:layout_marginBottom="10dp"
-            android:textAllCaps="true" android:letterSpacing="0.1"/>
+            android:text="AI Provider" android:textSize="12sp" android:textStyle="bold"
+            android:textColor="#6C63FF" android:layout_marginBottom="6dp" android:layout_marginTop="8dp"/>
 
-        <!-- POLLINATIONS NOTE -->
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="✅ Pollinations.AI — tanpa API key (otomatis digunakan)"
-            android:textSize="13sp" android:textColor="#2EA043"
-            android:background="@drawable/bg_card" android:padding="12dp"
-            android:layout_marginBottom="12dp"/>
+        <Spinner android:id="@+id/spinnerProvider"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:background="@drawable/bg_input" android:padding="8dp"/>
 
+        <!-- API Keys Section -->
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Gemini API Key (aistudio.google.com — gratis)" android:textSize="12sp"
-            android:textColor="@color/text_secondary" android:layout_marginBottom="4dp"/>
-        <EditText android:id="@+id/etGeminiKey" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:hint="AIzaSy..."
-            android:inputType="textPassword" android:background="@drawable/bg_input"
-            android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary"
-            android:padding="12dp" android:layout_marginBottom="12dp"/>
+            android:text="API Keys" android:textSize="12sp" android:textStyle="bold"
+            android:textColor="#6C63FF" android:layout_marginBottom="6dp" android:layout_marginTop="20dp"/>
 
+        <!-- Gemini -->
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Groq API Key (console.groq.com — gratis)" android:textSize="12sp"
-            android:textColor="@color/text_secondary" android:layout_marginBottom="4dp"/>
-        <EditText android:id="@+id/etGroqKey" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:hint="gsk_..."
-            android:inputType="textPassword" android:background="@drawable/bg_input"
-            android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary"
-            android:padding="12dp" android:layout_marginBottom="12dp"/>
+            android:text="Gemini API Key" android:textSize="12sp" android:textColor="#757575"
+            android:layout_marginBottom="4dp"/>
+        <EditText android:id="@+id/etGeminiKey"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:background="@drawable/bg_input" android:padding="12dp"
+            android:hint="AIza..." android:inputType="textPassword" android:layout_marginBottom="10dp"/>
 
+        <!-- Groq -->
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Mistral API Key (console.mistral.ai — gratis)" android:textSize="12sp"
-            android:textColor="@color/text_secondary" android:layout_marginBottom="4dp"/>
-        <EditText android:id="@+id/etMistralKey" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:hint="..."
-            android:inputType="textPassword" android:background="@drawable/bg_input"
-            android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary"
-            android:padding="12dp" android:layout_marginBottom="12dp"/>
+            android:text="Groq API Key" android:textSize="12sp" android:textColor="#757575"
+            android:layout_marginBottom="4dp"/>
+        <EditText android:id="@+id/etGroqKey"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:background="@drawable/bg_input" android:padding="12dp"
+            android:hint="gsk_..." android:inputType="textPassword" android:layout_marginBottom="10dp"/>
 
+        <!-- DeepSeek -->
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Cohere API Key (dashboard.cohere.com — gratis)" android:textSize="12sp"
-            android:textColor="@color/text_secondary" android:layout_marginBottom="4dp"/>
-        <EditText android:id="@+id/etCohereKey" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:hint="..."
-            android:inputType="textPassword" android:background="@drawable/bg_input"
-            android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary"
-            android:padding="12dp" android:layout_marginBottom="12dp"/>
+            android:text="DeepSeek API Key" android:textSize="12sp" android:textColor="#757575"
+            android:layout_marginBottom="4dp"/>
+        <EditText android:id="@+id/etDeepseekKey"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:background="@drawable/bg_input" android:padding="12dp"
+            android:hint="sk-..." android:inputType="textPassword" android:layout_marginBottom="10dp"/>
 
+        <!-- Claude -->
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Together AI Key (api.together.ai — gratis)" android:textSize="12sp"
-            android:textColor="@color/text_secondary" android:layout_marginBottom="4dp"/>
-        <EditText android:id="@+id/etTogetherKey" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:hint="..."
-            android:inputType="textPassword" android:background="@drawable/bg_input"
-            android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary"
-            android:padding="12dp" android:layout_marginBottom="12dp"/>
+            android:text="Claude API Key (Anthropic)" android:textSize="12sp" android:textColor="#757575"
+            android:layout_marginBottom="4dp"/>
+        <EditText android:id="@+id/etClaudeKey"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:background="@drawable/bg_input" android:padding="12dp"
+            android:hint="sk-ant-..." android:inputType="textPassword" android:layout_marginBottom="10dp"/>
 
+        <!-- OpenAI -->
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="OpenAI API Key (platform.openai.com — berbayar)" android:textSize="12sp"
-            android:textColor="@color/text_secondary" android:layout_marginBottom="4dp"/>
-        <EditText android:id="@+id/etOpenaiKey" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:hint="sk-..."
-            android:inputType="textPassword" android:background="@drawable/bg_input"
-            android:textColor="@color/text_primary" android:textColorHint="@color/text_secondary"
-            android:padding="12dp" android:layout_marginBottom="20dp"/>
+            android:text="OpenAI API Key" android:textSize="12sp" android:textColor="#757575"
+            android:layout_marginBottom="4dp"/>
+        <EditText android:id="@+id/etOpenaiKey"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:background="@drawable/bg_input" android:padding="12dp"
+            android:hint="sk-..." android:inputType="textPassword" android:layout_marginBottom="10dp"/>
 
+        <!-- Mistral -->
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Provider Aktif" android:textSize="12sp"
-            android:textColor="@color/text_secondary" android:layout_marginBottom="4dp"/>
-        <Spinner android:id="@+id/spinnerProvider" android:layout_width="match_parent"
-            android:layout_height="48dp" android:background="@drawable/bg_input"
-            android:padding="12dp" android:layout_marginBottom="20dp"/>
+            android:text="Mistral API Key" android:textSize="12sp" android:textColor="#757575"
+            android:layout_marginBottom="4dp"/>
+        <EditText android:id="@+id/etMistralKey"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:background="@drawable/bg_input" android:padding="12dp"
+            android:hint="key..." android:inputType="textPassword" android:layout_marginBottom="10dp"/>
+
+        <!-- Cohere -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Cohere API Key" android:textSize="12sp" android:textColor="#757575"
+            android:layout_marginBottom="4dp"/>
+        <EditText android:id="@+id/etCohereKey"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:background="@drawable/bg_input" android:padding="12dp"
+            android:hint="key..." android:inputType="textPassword" android:layout_marginBottom="10dp"/>
+
+        <!-- Together -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Together AI API Key" android:textSize="12sp" android:textColor="#757575"
+            android:layout_marginBottom="4dp"/>
+        <EditText android:id="@+id/etTogetherKey"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:background="@drawable/bg_input" android:padding="12dp"
+            android:hint="key..." android:inputType="textPassword" android:layout_marginBottom="16dp"/>
+
+        <!-- Settings -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Pengaturan" android:textSize="12sp" android:textStyle="bold"
+            android:textColor="#6C63FF" android:layout_marginBottom="10dp"/>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="10dp">
             <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Nilai KKM"
-                android:textColor="@color/text_primary" android:textSize="14sp"/>
-            <EditText android:id="@+id/etKkm" android:layout_width="80dp"
-                android:layout_height="wrap_content" android:inputType="number"
-                android:text="75" android:background="@drawable/bg_input"
-                android:textColor="@color/text_primary" android:padding="10dp"
-                android:gravity="center"/>
+                android:layout_weight="1" android:text="Nilai KKM (%)" android:textSize="13sp"/>
+            <EditText android:id="@+id/etKkm" android:layout_width="80dp" android:layout_height="40dp"
+                android:background="@drawable/bg_input" android:padding="8dp"
+                android:inputType="number" android:gravity="center"/>
         </LinearLayout>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="10dp">
             <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Mode Samaran (sembunyikan status AI)"
-                android:textColor="@color/text_primary" android:textSize="14sp"/>
-            <Switch android:id="@+id/switchStealth" android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_weight="1" android:text="Mode samaran" android:textSize="13sp"/>
+            <Switch android:id="@+id/switchStealth" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
         </LinearLayout>
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical"
-            android:layout_marginBottom="24dp">
+            android:layout_marginBottom="20dp">
             <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Jawab dalam Bahasa Indonesia"
-                android:textColor="@color/text_primary" android:textSize="14sp"/>
-            <Switch android:id="@+id/switchBahasaIndo" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:checked="true"/>
+                android:layout_weight="1" android:text="Jawab Bahasa Indonesia" android:textSize="13sp"/>
+            <Switch android:id="@+id/switchBahasaIndo" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
         </LinearLayout>
 
-        <Button android:id="@+id/btnTestProvider" android:layout_width="match_parent"
-            android:layout_height="48dp" android:text="Test Provider"
-            android:backgroundTint="@color/surface2" android:layout_marginBottom="10dp"/>
+        <!-- Buttons -->
+        <Button android:id="@+id/btnTestProvider"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:text="Test Provider" android:backgroundTint="#252B50"
+            android:layout_marginBottom="10dp"/>
 
-        <Button android:id="@+id/btnSave" android:layout_width="match_parent"
-            android:layout_height="52dp" android:text="Simpan Pengaturan"
-            android:backgroundTint="@color/accent_blue"/>
+        <Button android:id="@+id/btnSave"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:text="Simpan" android:backgroundTint="#6C63FF"
+            android:layout_marginBottom="20dp"/>
 
     </LinearLayout>
 </ScrollView>

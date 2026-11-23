@@ -11,6 +11,7 @@ import android.webkit.*
 import android.widget.*
 import androidx.core.app.NotificationCompat
 import com.auraai.overlay.R
+import com.auraai.overlay.ai.AiProvider
 import com.auraai.overlay.ui.MainActivity
 
 class BubbleService : Service() {
@@ -26,15 +27,17 @@ class BubbleService : Service() {
     private var robotView: View? = null
     private var menuView: View? = null
     private var statusView: View? = null
-    private var chatView: View? = null
-    private var isChatOpen = false
+    private var aiPanelView: View? = null
     private var isMenuOpen = false
+    private var isAiPanelOpen = false
     private val handler = Handler(Looper.getMainLooper())
 
     private var stealthMode = false
-    private var autoAnswerEnabled = false
     private var currentQuestion = ""
     private var currentPlatform = ""
+
+    // WebView persisten — dibuat sekali, tidak dihancurkan saat panel ditutup
+    private var persistentWebViews = mutableMapOf<String, WebView>()
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
@@ -42,8 +45,7 @@ class BubbleService : Service() {
                 "com.auraai.AURA_STATUS"   -> handleStatus(intent.getStringExtra("status") ?: return)
                 "com.auraai.AURA_QUESTION" -> handleQuestion(
                     intent.getStringExtra("question") ?: return,
-                    intent.getStringExtra("platform") ?: ""
-                )
+                    intent.getStringExtra("platform") ?: "")
                 "com.auraai.AURA_ANSWER"   -> handleAnswer(intent.getStringExtra("answer") ?: return)
             }
         }
@@ -62,6 +64,8 @@ class BubbleService : Service() {
     override fun onDestroy() {
         isRunning = false
         try { unregisterReceiver(receiver) } catch (_: Exception) {}
+        persistentWebViews.values.forEach { try { it.destroy() } catch (_: Exception) {} }
+        persistentWebViews.clear()
         removeAllViews()
         super.onDestroy()
     }
@@ -97,14 +101,12 @@ class BubbleService : Service() {
     }
 
     private fun buildNotif(): Notification {
-        val stopPi = PendingIntent.getService(
-            this, 0,
+        val stopPi = PendingIntent.getService(this, 0,
             Intent(this, BubbleService::class.java).apply { action = ACTION_STOP },
-            PendingIntent.FLAG_IMMUTABLE
-        )
+            PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("AuraAI Aktif")
-            .setContentText("Tap robot 🤖 untuk menu")
+            .setContentText("Tap robot untuk menu")
             .setSmallIcon(R.drawable.ic_notif)
             .addAction(0, "Stop", stopPi)
             .setOngoing(true).setSilent(true).build()
@@ -112,33 +114,34 @@ class BubbleService : Service() {
 
     // ── ROBOT MASCOT ──────────────────────────────────────────────
     private fun showRobot() {
-        val size = dp(72)
-        val params = WindowManager.LayoutParams(
-            size, size, overlayType(),
+        val size = dp(68)
+        val params = WindowManager.LayoutParams(size, size, overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.TOP or Gravity.END; x = dp(16); y = dp(220) }
+        ).apply { gravity = Gravity.TOP or Gravity.END; x = dp(14); y = dp(200) }
 
         val iv = ImageView(this).apply {
             setImageResource(R.drawable.ic_robot_mascot)
             scaleType = ImageView.ScaleType.FIT_CENTER
-            setPadding(dp(4), dp(4), dp(4), dp(4))
         }
 
         setupDrag(iv, params)
         iv.setOnClickListener {
-            if (isChatOpen) closeChat()
-            else if (isMenuOpen) closeMenu()
-            else openMenu()
+            when {
+                isAiPanelOpen -> closeAiPanel()
+                isMenuOpen    -> closeMenu()
+                else          -> openMenu()
+            }
         }
 
-        iv.startAnimation(ScaleAnimation(1f, 1.08f, 1f, 1.08f,
+        // Pulse animasi
+        val pulse = ScaleAnimation(1f, 1.07f, 1f, 1.07f,
             Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f).apply {
-            duration = 900; repeatMode = Animation.REVERSE
-            repeatCount = Animation.INFINITE
-            interpolator = AccelerateDecelerateInterpolator()
-        })
+            duration = 950; repeatMode = Animation.REVERSE
+            repeatCount = Animation.INFINITE; interpolator = AccelerateDecelerateInterpolator()
+        }
+        iv.startAnimation(pulse)
 
         try { wm.addView(iv, params); robotView = iv } catch (e: Exception) { e.printStackTrace() }
     }
@@ -167,122 +170,116 @@ class BubbleService : Service() {
         if (isMenuOpen) return
         isMenuOpen = true
 
-        val params = WindowManager.LayoutParams(
-            dp(265), WindowManager.LayoutParams.WRAP_CONTENT,
+        val params = WindowManager.LayoutParams(dp(270), WindowManager.LayoutParams.WRAP_CONTENT,
             overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.TOP or Gravity.START; x = dp(12); y = dp(120) }
+        ).apply { gravity = Gravity.TOP or Gravity.START; x = dp(12); y = dp(110) }
 
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(8), 0, dp(14))
-            elevation = dp(8).toFloat()
-            background = roundedBg(Color.WHITE, dp(16))
+            setPadding(0, dp(10), 0, dp(14))
+            elevation = dp(10).toFloat()
+            background = roundedBg(Color.WHITE, dp(18))
         }
 
-        card.addView(TextView(this).apply {
-            text = "AuraAI"
-            textSize = 10f
-            setTextColor(Color.parseColor("#9E9E9E"))
-            setPadding(dp(20), dp(4), dp(20), dp(8))
-            typeface = Typeface.DEFAULT_BOLD
-            letterSpacing = 0.12f
+        // Header
+        card.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(18), dp(2), dp(14), dp(10))
+            addView(ImageView(this@BubbleService).apply {
+                setImageResource(R.drawable.ic_robot_mascot)
+                layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply { rightMargin = dp(8) }
+            })
+            addView(TextView(this@BubbleService).apply {
+                text = "AuraAI"; textSize = 14f; typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#1A1F3A"))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(TextView(this@BubbleService).apply {
+                text = "✕"; textSize = 16f; setTextColor(Color.parseColor("#BDBDBD"))
+                setPadding(dp(8), 0, dp(4), 0)
+                setOnClickListener { closeMenu() }
+            })
         })
         card.addView(divider())
 
+        // Menu items
         listOf(
             Triple("✨", "Jawab soal otomatis", 0),
             Triple("✏️", "Jawaban diisi AI", 1),
             Triple("🎯", "Auto nilai di atas KKM", 2),
             Triple("📖", "Penjelasan lengkap", 3),
-            Triple("💬", "Buka ChatGPT", 4),
+            Triple("🤖", "Buka panel AI", 4),
         ).forEach { (icon, label, idx) -> card.addView(menuRow(icon, label, idx)) }
 
         card.addView(divider())
 
-        // Stealth toggle
-        val row = LinearLayout(this).apply {
+        // Stealth toggle row
+        card.addView(LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(10), dp(16), dp(10))
-        }
-        row.addView(TextView(this).apply { text="👁️"; textSize=18f; setPadding(0,0,dp(12),0) })
-        row.addView(TextView(this).apply {
-            text="Mode samaran"; textSize=14f
-            setTextColor(Color.parseColor("#212121"))
-            layoutParams=LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        val toggle = Switch(this).apply {
-            isChecked = stealthMode
-            setOnCheckedChangeListener { _, c ->
-                stealthMode = c
-                robotView?.alpha = if (c) 0.15f else 1f
+            addView(TextView(this@BubbleService).apply { text="👁️"; textSize=17f; setPadding(0,0,dp(12),0) })
+            addView(TextView(this@BubbleService).apply {
+                text="Mode samaran"; textSize=13f
+                setTextColor(Color.parseColor("#424242"))
+                layoutParams=LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            val toggle = Switch(this@BubbleService).apply {
+                isChecked = stealthMode
+                setOnCheckedChangeListener { _, c ->
+                    stealthMode = c; robotView?.alpha = if (c) 0.12f else 1f
+                }
             }
-        }
-        row.addView(toggle)
-        card.addView(row)
-
-        card.addView(TextView(this).apply {
-            text = "DEVELOPER  @tugasvip3"
-            textSize = 9f; gravity = Gravity.CENTER
-            setTextColor(Color.parseColor("#BDBDBD"))
-            setPadding(0, dp(4), 0, 0)
+            addView(toggle)
         })
 
-        card.startAnimation(AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left).apply {
-            duration = 180
-        })
         card.setOnTouchListener { _, e -> if (e.action == MotionEvent.ACTION_OUTSIDE) closeMenu(); false }
-
+        card.startAnimation(TranslateAnimation(-dp(280).toFloat(), 0f, 0f, 0f).apply {
+            duration = 200; interpolator = DecelerateInterpolator()
+        })
         try { wm.addView(card, params); menuView = card } catch (e: Exception) { e.printStackTrace() }
     }
 
-    private fun menuRow(icon: String, label: String, idx: Int): View {
-        return LinearLayout(this).apply {
+    private fun menuRow(icon: String, label: String, idx: Int): View =
+        LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(10), dp(16), dp(10))
+            setPadding(dp(16), dp(11), dp(16), dp(11))
             isClickable = true; isFocusable = true
             setBackgroundResource(android.R.drawable.list_selector_background)
-            addView(TextView(this@BubbleService).apply {
-                text=icon; textSize=18f; setPadding(0,0,dp(14),0)
-            })
-            addView(TextView(this@BubbleService).apply {
-                text=label; textSize=14f; setTextColor(Color.parseColor("#212121"))
-            })
-            setOnClickListener {
-                closeMenu()
-                handler.postDelayed({ handleMenuAction(idx) }, 160)
-            }
+            addView(TextView(this@BubbleService).apply { text=icon; textSize=17f; setPadding(0,0,dp(12),0) })
+            addView(TextView(this@BubbleService).apply { text=label; textSize=13f; setTextColor(Color.parseColor("#212121")) })
+            setOnClickListener { closeMenu(); handler.postDelayed({ handleMenuAction(idx) }, 160) }
         }
-    }
 
     private fun handleMenuAction(idx: Int) {
         when (idx) {
             0 -> {
-                autoAnswerEnabled = true
                 AuraAccessibilityService.autoClickEnabled = true
                 showStatus("🔍 Scanning soal...", true)
                 AuraAccessibilityService.triggerScan()
             }
             1 -> {
-                showStatus("✏️ Mode isi AI aktif", false)
+                AuraAccessibilityService.autoClickEnabled = false
+                showStatus("✏️ Scanning — tampilkan jawaban...", true)
                 AuraAccessibilityService.triggerScan()
             }
             2 -> {
-                autoAnswerEnabled = true
                 AuraAccessibilityService.autoClickEnabled = true
-                showStatus("🎯 Auto KKM aktif...", true)
+                showStatus("🎯 Auto KKM — scanning...", true)
                 AuraAccessibilityService.triggerScan()
             }
             3 -> {
+                AuraAccessibilityService.autoClickEnabled = false
                 showStatus("📖 Meminta penjelasan...", true)
                 AuraAccessibilityService.instance?.doScanWithMode("explain")
             }
-            4 -> openChat()
+            4 -> openAiPanel()
         }
     }
 
@@ -291,103 +288,164 @@ class BubbleService : Service() {
         isMenuOpen = false
         val view = menuView ?: return
         menuView = null
-        handler.post {
-            try { view.clearAnimation(); wm.removeView(view) } catch (_: Exception) {}
-        }
+        handler.post { try { view.clearAnimation(); wm.removeView(view) } catch (_: Exception) {} }
     }
 
-    // ── FLOATING CHATGPT (WebView overlay, persistent session) ────
-    private fun openChat() {
-        if (isChatOpen) { closeChat(); return }
-        isChatOpen = true
+    // ── FLOATING AI PANEL ─────────────────────────────────────────
+    // Panel ngambang dengan tab: Claude / ChatGPT / Gemini / DeepSeek
+    // WebView masing-masing persisten — tidak di-reload saat ganti tab
+    private fun openAiPanel() {
+        if (isAiPanelOpen) { closeAiPanel(); return }
+        isAiPanelOpen = true
 
         val dm = resources.displayMetrics
         val params = WindowManager.LayoutParams(
-            (dm.widthPixels * 0.92).toInt(),
-            (dm.heightPixels * 0.78).toInt(),
+            (dm.widthPixels * 0.93).toInt(),
+            (dm.heightPixels * 0.80).toInt(),
             overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.CENTER; y = -dp(30) }
+        ).apply { gravity = Gravity.CENTER; y = -dp(20) }
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = roundedBg(Color.WHITE, dp(18))
-            elevation = dp(12).toFloat()
+            elevation = dp(14).toFloat()
+            background = roundedBg(Color.parseColor("#1A1F3A"), dp(20))
         }
 
-        // Header bar
+        // ── Header ───────────────────────────────────────────────
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(10), dp(12), dp(10))
-            setBackgroundColor(Color.parseColor("#6C63FF"))
-            // rounded top only via manual padding
+            setPadding(dp(16), dp(14), dp(12), dp(12))
+            setBackgroundColor(Color.parseColor("#252B50"))
         }
         header.addView(TextView(this).apply {
-            text = "💬 ChatGPT"
-            textSize = 15f; typeface = Typeface.DEFAULT_BOLD
+            text = "🤖 AI Panel"; textSize = 15f; typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         })
-        // Close button
         header.addView(TextView(this).apply {
-            text = "✕"
-            textSize = 18f; setTextColor(Color.WHITE)
-            setPadding(dp(12), dp(4), dp(4), dp(4))
-            setOnClickListener { closeChat() }
+            text = "✕"; textSize = 20f; setTextColor(Color.parseColor("#9E9E9E"))
+            setPadding(dp(12), dp(2), dp(4), dp(2))
+            setOnClickListener { closeAiPanel() }
         })
         container.addView(header)
 
-        // WebView dengan persistent cookies
-        val webView = WebView(this).apply {
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                databaseEnabled = true
-                loadWithOverviewMode = true
-                useWideViewPort = true
-                setSupportZoom(true)
-                builtInZoomControls = false
-                displayZoomControls = false
-                userAgentString = "Mozilla/5.0 (Linux; Android 13; Pixel 7) " +
-                        "AppleWebKit/537.36 (KHTML, like Gecko) " +
-                        "Chrome/120.0.0.0 Mobile Safari/537.36"
-                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            }
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(view: WebView, req: WebResourceRequest): Boolean {
-                    // Tetap di dalam WebView, jangan buka browser luar
-                    return false
+        // ── Tab bar ───────────────────────────────────────────────
+        data class AiTab(val label: String, val url: String, val color: String)
+        val tabs = listOf(
+            AiTab("Claude",    "https://claude.ai",           "#D97706"),
+            AiTab("ChatGPT",   "https://chat.openai.com",     "#10A37F"),
+            AiTab("Gemini",    "https://gemini.google.com",   "#4285F4"),
+            AiTab("DeepSeek",  "https://chat.deepseek.com",   "#6C63FF"),
+        )
+
+        val tabBar = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            setBackgroundColor(Color.parseColor("#1E2440"))
+        }
+        val tabRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(dp(8), dp(6), dp(8), dp(6))
+        }
+        tabBar.addView(tabRow)
+        container.addView(tabBar)
+
+        // ── WebView container ─────────────────────────────────────
+        val webContainer = FrameLayout(this)
+        container.addView(webContainer, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+
+        // Buat semua WebView di awal (persisten)
+        tabs.forEachIndexed { i, tab ->
+            val wv = persistentWebViews.getOrPut(tab.url) {
+                WebView(this).apply {
+                    settings.apply {
+                        javaScriptEnabled = true; domStorageEnabled = true
+                        databaseEnabled = true; loadWithOverviewMode = true
+                        useWideViewPort = true; setSupportZoom(false)
+                        builtInZoomControls = false; displayZoomControls = false
+                        userAgentString = "Mozilla/5.0 (Linux; Android 13; Pixel 7) " +
+                                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    }
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest) = false
+                    }
+                    webChromeClient = WebChromeClient()
+                    CookieManager.getInstance().setAcceptCookie(true)
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                    loadUrl(tab.url)
                 }
             }
-            webChromeClient = WebChromeClient()
-            CookieManager.getInstance().setAcceptCookie(true)
-            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
-            )
-            loadUrl("https://chat.openai.com")
+            webContainer.addView(wv, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT))
+            wv.visibility = if (i == 0) View.VISIBLE else View.GONE
         }
-        container.addView(webView)
+
+        // Build tab buttons
+        var activeIdx = 0
+        val tabButtons = mutableListOf<TextView>()
+        tabs.forEachIndexed { i, tab ->
+            val btn = TextView(this).apply {
+                text = tab.label; textSize = 12f; typeface = Typeface.DEFAULT_BOLD
+                setPadding(dp(14), dp(7), dp(14), dp(7))
+                setTextColor(if (i == 0) Color.WHITE else Color.parseColor("#757575"))
+                background = if (i == 0) roundedBg(Color.parseColor(tab.color), dp(20))
+                             else roundedBg(Color.parseColor("#2D3458"), dp(20))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { rightMargin = dp(6) }
+                setOnClickListener {
+                    if (activeIdx == i) return@setOnClickListener
+                    // Deactivate old
+                    tabButtons[activeIdx].apply {
+                        setTextColor(Color.parseColor("#757575"))
+                        background = roundedBg(Color.parseColor("#2D3458"), dp(20))
+                    }
+                    // Hide old webview
+                    (webContainer.getChildAt(activeIdx) as? WebView)?.visibility = View.GONE
+                    // Activate new
+                    activeIdx = i
+                    setTextColor(Color.WHITE)
+                    background = roundedBg(Color.parseColor(tab.color), dp(20))
+                    // Show new webview
+                    (webContainer.getChildAt(i) as? WebView)?.visibility = View.VISIBLE
+                }
+            }
+            tabButtons.add(btn)
+            tabRow.addView(btn)
+        }
 
         // Slide in dari bawah
-        container.startAnimation(TranslateAnimation(0f, 0f, dp(100).toFloat(), 0f).apply {
-            duration = 240; interpolator = DecelerateInterpolator()
+        container.startAnimation(TranslateAnimation(0f, 0f, dp(120).toFloat(), 0f).apply {
+            duration = 260; interpolator = DecelerateInterpolator()
         })
 
-        try { wm.addView(container, params); chatView = container }
-        catch (e: Exception) { isChatOpen = false; e.printStackTrace() }
+        try { wm.addView(container, params); aiPanelView = container }
+        catch (e: Exception) { isAiPanelOpen = false; e.printStackTrace() }
     }
 
-    private fun closeChat() {
-        if (!isChatOpen) return
-        isChatOpen = false
-        val view = chatView ?: return
-        chatView = null
-        handler.post {
-            try { view.clearAnimation(); wm.removeView(view) } catch (_: Exception) {}
+    private fun closeAiPanel() {
+        if (!isAiPanelOpen) return
+        isAiPanelOpen = false
+        val view = aiPanelView ?: return
+        aiPanelView = null
+        // Slide out
+        val anim = TranslateAnimation(0f, 0f, 0f, dp(120).toFloat()).apply {
+            duration = 200; interpolator = AccelerateInterpolator()
         }
+        anim.setAnimationListener(object : Animation.AnimationListener {
+            override fun onAnimationStart(a: Animation?) {}
+            override fun onAnimationRepeat(a: Animation?) {}
+            override fun onAnimationEnd(a: Animation?) {
+                handler.post { try { view.clearAnimation(); wm.removeView(view) } catch (_: Exception) {} }
+            }
+        })
+        view.startAnimation(anim)
     }
 
     // ── STATUS / ANSWER CARD ──────────────────────────────────────
@@ -395,31 +453,28 @@ class BubbleService : Service() {
         removeStatus()
         val dm = resources.displayMetrics
         val params = WindowManager.LayoutParams(
-            (dm.widthPixels * 0.72).toInt(),
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            (dm.widthPixels * 0.74).toInt(), WindowManager.LayoutParams.WRAP_CONTENT,
             overlayType(),
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = dp(100) }
+        ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = dp(110) }
 
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(10), dp(16), dp(12))
-            elevation = dp(6).toFloat()
-            background = roundedBg(Color.WHITE, dp(20))
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            elevation = dp(8).toFloat()
+            background = roundedBg(Color.parseColor("#1A1F3A"), dp(20))
         }
         card.addView(TextView(this).apply {
-            this.text = text; textSize = 13f
-            setTextColor(Color.parseColor("#212121"))
-            typeface = Typeface.DEFAULT_BOLD
+            this.text = text; textSize = 13f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
         })
         if (progress) {
             card.addView(ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
                 isIndeterminate = true
                 indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FF6B9D"))
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(3))
-                    .apply { topMargin = dp(6) }
+                    .apply { topMargin = dp(8) }
             })
         }
         card.startAnimation(TranslateAnimation(0f, 0f, dp(60).toFloat(), 0f).apply {
@@ -432,85 +487,81 @@ class BubbleService : Service() {
         removeStatus()
         val dm = resources.displayMetrics
         val params = WindowManager.LayoutParams(
-            (dm.widthPixels * 0.88).toInt(),
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            (dm.widthPixels * 0.90).toInt(), WindowManager.LayoutParams.WRAP_CONTENT,
             overlayType(),
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = dp(80) }
 
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(14), dp(16), dp(14))
-            elevation = dp(8).toFloat()
-            background = roundedBg(Color.WHITE, dp(20))
+            elevation = dp(10).toFloat()
+            background = roundedBg(Color.parseColor("#1A1F3A"), dp(20))
         }
 
+        // Platform chip
         if (platform.isNotBlank()) {
             card.addView(TextView(this).apply {
                 text = "📱 $platform"; textSize = 10f
-                setTextColor(Color.parseColor("#6C63FF"))
-                background = roundedBg(Color.parseColor("#EDE7FF"), dp(20))
-                setPadding(dp(8), dp(2), dp(8), dp(2))
+                setTextColor(Color.parseColor("#A78BFA"))
+                background = roundedBg(Color.parseColor("#252B50"), dp(20))
+                setPadding(dp(10), dp(3), dp(10), dp(3))
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { bottomMargin = dp(6) }
-            })
-        }
-
-        if (question.isNotBlank()) {
-            card.addView(TextView(this).apply {
-                text = question.take(100) + if (question.length > 100) "..." else ""
-                textSize = 11f; maxLines = 2
-                setTextColor(Color.parseColor("#757575"))
-                ellipsize = android.text.TextUtils.TruncateAt.END
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply { bottomMargin = dp(8) }
             })
         }
 
+        // Soal singkat
+        if (question.isNotBlank()) {
+            card.addView(TextView(this).apply {
+                text = question.take(100) + if (question.length > 100) "..." else ""
+                textSize = 11f; maxLines = 2
+                setTextColor(Color.parseColor("#9CA3AF"))
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = dp(8) }
+            })
+        }
+
+        // Jawaban — highlight
         card.addView(TextView(this).apply {
-            text = answer; textSize = 15f
-            setTextColor(Color.parseColor("#212121"))
-            typeface = Typeface.DEFAULT_BOLD
-            background = roundedBg(Color.parseColor("#F0F4FF"), dp(10))
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+            text = answer; textSize = 16f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            background = roundedBg(Color.parseColor("#6C63FF"), dp(12))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = dp(10) }
         })
 
+        // Progress bar pink
         card.addView(ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = false; progress = 100
             progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FF6B9D"))
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(3))
-                .apply { bottomMargin = dp(8) }
+                .apply { bottomMargin = dp(10) }
         })
 
+        // Tutup button
         card.addView(TextView(this).apply {
             text = "✕ Tutup"; textSize = 11f; gravity = Gravity.CENTER
-            setTextColor(Color.parseColor("#9E9E9E"))
+            setTextColor(Color.parseColor("#6B7280"))
             setPadding(dp(12), dp(4), dp(12), dp(4))
             setOnClickListener { removeStatus() }
         })
 
         card.startAnimation(TranslateAnimation(0f, 0f, dp(80).toFloat(), 0f).apply {
-            duration = 250; interpolator = DecelerateInterpolator()
+            duration = 260; interpolator = DecelerateInterpolator()
         })
         try { wm.addView(card, params); statusView = card } catch (e: Exception) { e.printStackTrace() }
-        handler.postDelayed({ removeStatus() }, 14000)
+        handler.postDelayed({ removeStatus() }, 15000)
     }
 
     private fun removeStatus() {
-        statusView?.let {
-            try { wm.removeView(it) } catch (_: Exception) {}
-            statusView = null
-        }
+        statusView?.let { try { wm.removeView(it) } catch (_: Exception) {}; statusView = null }
     }
 
     // ── BROADCAST HANDLERS ────────────────────────────────────────
@@ -519,27 +570,27 @@ class BubbleService : Service() {
             when {
                 status == "scanning"  -> showStatus("🔍 Scanning soal...", true)
                 status == "answering" -> showStatus("🤖 AI menjawab...", true)
-                status == "done"      -> { /* answer card sudah tampil */ }
+                status == "done"      -> {}
                 status == "idle"      -> removeStatus()
+                status == "connected" -> {} // accessibility connected
                 status.startsWith("error:no_question") -> {
                     showStatus("⚠️ Soal tidak terdeteksi", false)
-                    handler.postDelayed({ removeStatus() }, 3000)
+                    handler.postDelayed({ removeStatus() }, 3500)
                 }
                 status.startsWith("error:no_window") -> {
                     showStatus("⚠️ Buka app ujian dulu", false)
-                    handler.postDelayed({ removeStatus() }, 3000)
+                    handler.postDelayed({ removeStatus() }, 3500)
                 }
                 status.startsWith("error:") -> {
                     showStatus("❌ ${status.removePrefix("error:")}", false)
-                    handler.postDelayed({ removeStatus() }, 4000)
+                    handler.postDelayed({ removeStatus() }, 5000)
                 }
             }
         }
     }
 
     private fun handleQuestion(question: String, platform: String) {
-        currentQuestion = question
-        currentPlatform = platform
+        currentQuestion = question; currentPlatform = platform
         handler.post { showStatus("✏️ Mengerjakan soal", true) }
     }
 
@@ -549,10 +600,10 @@ class BubbleService : Service() {
 
     // ── HELPERS ───────────────────────────────────────────────────
     private fun removeAllViews() {
-        listOf(robotView, menuView, statusView, chatView).forEach {
+        listOf(robotView, menuView, statusView, aiPanelView).forEach {
             it?.let { v -> try { wm.removeView(v) } catch (_: Exception) {} }
         }
-        robotView = null; menuView = null; statusView = null; chatView = null
+        robotView = null; menuView = null; statusView = null; aiPanelView = null
     }
 
     private fun overlayType() =
@@ -562,9 +613,8 @@ class BubbleService : Service() {
 
     private fun dp(dp: Int) = (dp * resources.displayMetrics.density).toInt()
 
-    private fun roundedBg(color: Int, radius: Int) = GradientDrawable().apply {
-        setColor(color); cornerRadius = radius.toFloat()
-    }
+    private fun roundedBg(color: Int, radius: Int) =
+        GradientDrawable().apply { setColor(color); cornerRadius = radius.toFloat() }
 
     private fun divider() = View(this).apply {
         setBackgroundColor(Color.parseColor("#F0F0F0"))
