@@ -506,10 +506,7 @@ class BubbleService : Service() {
                         override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest) = false
                     }
                     webChromeClient = WebChromeClient()
-                    CookieManager.getInstance().apply {
-                        setAcceptCookie(true)
-                        setAcceptThirdPartyCookies(this@apply, true)
-                    }
+                    CookieManager.getInstance().setAcceptCookie(true)
                     loadUrl(tab.url)
                 }
             }
