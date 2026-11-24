@@ -41,14 +41,15 @@ class AuraAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
+        // Auto-mode: listen to window changes
         if (!autoClickEnabled || isScanning) return
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED &&
             event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
 
-        // Debounce 1.2s — tunggu layar stabil
+        // Debounce 1.4s — wait for screen to stabilize
         debounceJob?.let { handler.removeCallbacks(it) }
         debounceJob = Runnable { doScan(mode = "auto") }
-        handler.postDelayed(debounceJob!!, 1200)
+        handler.postDelayed(debounceJob!!, 1400)
     }
 
     override fun onInterrupt() {}
@@ -75,7 +76,7 @@ class AuraAccessibilityService : AccessibilityService() {
                     return@Thread
                 }
 
-                // Jangan rescan soal yang sama kalau auto mode
+                // Don't re-scan same question in auto mode
                 if (mode == "auto" && exam.questionText == lastScannedText) {
                     isScanning = false
                     broadcastStatus("idle")
@@ -88,23 +89,20 @@ class AuraAccessibilityService : AccessibilityService() {
 
                 val prefs = getSharedPreferences("auraai_prefs", MODE_PRIVATE)
 
-                // Build prompt sesuai mode
                 val answer = when (mode) {
                     "explain" -> {
                         val prompt = buildExplainPrompt(exam)
-                        ProviderManager.ask(prefs,
-                            com.auraai.overlay.ai.AiProvider.entries.firstOrNull {
-                                it.id == (prefs.getString("selected_provider", "auto") ?: "auto")
-                            } ?: com.auraai.overlay.ai.AiProvider.AUTO,
-                            prompt)
+                        val provider = com.auraai.overlay.ai.AiProvider.entries.firstOrNull {
+                            it.id == (prefs.getString("selected_provider", "auto") ?: "auto")
+                        } ?: com.auraai.overlay.ai.AiProvider.AUTO
+                        ProviderManager.ask(prefs, provider, prompt)
                     }
                     else -> ProviderManager.askExam(prefs, exam)
                 }
 
                 broadcastAnswer(answer)
 
-                // Auto-click / auto-type
-                if (autoClickEnabled) {
+                if (autoClickEnabled && mode != "explain") {
                     handler.post {
                         AnswerEngine.clickAnswer(this, exam, answer)
                     }
@@ -127,15 +125,16 @@ class AuraAccessibilityService : AccessibilityService() {
             node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             return
         }
+        // Walk up parent chain
         var parent = node.parent
-        repeat(6) {
+        repeat(7) {
             if (parent?.isClickable == true) {
                 parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                 return
             }
             parent = parent?.parent
         }
-        // Fallback gesture
+        // Fallback: gesture tap at center of bounds
         val bounds = Rect()
         node.getBoundsInScreen(bounds)
         if (!bounds.isEmpty) tapAt(bounds.centerX().toFloat(), bounds.centerY().toFloat())
@@ -149,6 +148,12 @@ class AuraAccessibilityService : AccessibilityService() {
 
     fun typeText(node: AccessibilityNodeInfo, text: String) {
         node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        // Clear existing text first
+        node.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, Bundle().apply {
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT,
+                node.text?.length ?: 0)
+        })
         val args = Bundle()
         args.putString(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
         node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)

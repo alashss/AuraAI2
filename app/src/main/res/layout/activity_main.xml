@@ -1,28 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:background="@color/bg_deep"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="52dp"
+        android:paddingBottom="32dp">
 
-        <!-- Header -->
+        <!-- ── HEADER ── -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="24dp">
-
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_robot_mascot"
-                android:layout_marginEnd="12dp"/>
+            android:layout_marginBottom="28dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -34,16 +33,18 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="AuraAI"
-                    android:textSize="22sp"
+                    android:textSize="28sp"
                     android:textStyle="bold"
-                    android:textColor="#1A1F3A"/>
+                    android:textColor="@color/text_primary"
+                    android:letterSpacing="-0.02"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Exam Assistant"
                     android:textSize="13sp"
-                    android:textColor="#757575"/>
+                    android:textColor="@color/accent"
+                    android:letterSpacing="0.04"/>
             </LinearLayout>
 
             <ImageButton
@@ -51,227 +52,257 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:src="@android:drawable/ic_menu_preferences"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Settings"/>
+                android:background="@drawable/bg_chip"
+                android:padding="8dp"
+                android:contentDescription="Settings"
+                android:tint="@color/text_secondary"/>
         </LinearLayout>
 
-        <!-- Status Card -->
-        <androidx.cardview.widget.CardView
+        <!-- ── HERO STATUS CARD ── -->
+        <LinearLayout
             android:id="@+id/statusCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="22dp"
             android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
+            android:background="@drawable/bg_hero_gradient"
+            android:elevation="8dp">
 
+            <!-- Robot icon + status row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
 
-                <TextView
-                    android:id="@+id/tvStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="AuraAI Siap"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="#FFFFFF"
-                    android:layout_marginBottom="4dp"/>
-
-                <TextView
-                    android:id="@+id/tvStatusDesc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Tap mulai untuk aktifkan bubble di atas semua app"
-                    android:textSize="13sp"
-                    android:textColor="#E8E8F0"/>
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:src="@drawable/ic_robot_mascot"
+                    android:layout_marginEnd="14dp"/>
 
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="16dp"
-                    android:gravity="end">
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-                    <Button
-                        android:id="@+id/btnStop"
+                    <TextView
+                        android:id="@+id/tvStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Stop"
-                        android:textColor="#FF4444"
-                        android:backgroundTint="#FFFFFF"
-                        android:visibility="gone"
-                        android:layout_marginEnd="8dp"/>
+                        android:text="Siap digunakan"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
 
-                    <Button
-                        android:id="@+id/btnStart"
+                    <TextView
+                        android:id="@+id/tvStatusDesc"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Mulai"
-                        android:textColor="#6C63FF"
-                        android:backgroundTint="#FFFFFF"/>
+                        android:text="Aktifkan bubble untuk mulai"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:layout_marginTop="2dp"/>
                 </LinearLayout>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
 
-        <!-- Platform Support -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#2A3156"
+                android:layout_marginBottom="16dp"/>
 
+            <!-- Action buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:orientation="horizontal"
+                android:gravity="end">
 
-                <TextView
+                <Button
+                    android:id="@+id/btnStop"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Platform yang Didukung"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="#1A1F3A"
-                    android:layout_marginBottom="12dp"/>
+                    android:layout_height="40dp"
+                    android:text="Matikan"
+                    android:textSize="13sp"
+                    android:textColor="@color/red_err"
+                    android:background="@drawable/bg_button_ghost"
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:visibility="gone"
+                    android:layout_marginEnd="10dp"
+                    android:stateListAnimator="@null"/>
 
-                <GridLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:columnCount="2"
-                    android:rowCount="3">
-
-                    <TextView android:layout_width="0dp" android:layout_columnWeight="1"
-                        android:text="🌐 Wayground" android:textSize="13sp"
-                        android:textColor="#424242" android:padding="4dp"/>
-                    <TextView android:layout_width="0dp" android:layout_columnWeight="1"
-                        android:text="🎮 Kahoot" android:textSize="13sp"
-                        android:textColor="#424242" android:padding="4dp"/>
-                    <TextView android:layout_width="0dp" android:layout_columnWeight="1"
-                        android:text="🛡️ ExamBro" android:textSize="13sp"
-                        android:textColor="#424242" android:padding="4dp"/>
-                    <TextView android:layout_width="0dp" android:layout_columnWeight="1"
-                        android:text="📋 Google Form" android:textSize="13sp"
-                        android:textColor="#424242" android:padding="4dp"/>
-                    <TextView android:layout_width="0dp" android:layout_columnWeight="1"
-                        android:text="🌍 Browser" android:textSize="13sp"
-                        android:textColor="#424242" android:padding="4dp"/>
-                    <TextView android:layout_width="0dp" android:layout_columnWeight="1"
-                        android:text="📱 App CBT" android:textSize="13sp"
-                        android:textColor="#424242" android:padding="4dp"/>
-                </GridLayout>
+                <Button
+                    android:id="@+id/btnStart"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Aktifkan"
+                    android:textSize="13sp"
+                    android:textColor="@color/white"
+                    android:background="@drawable/bg_button_accent"
+                    android:paddingStart="22dp"
+                    android:paddingEnd="22dp"
+                    android:stateListAnimator="@null"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </LinearLayout>
 
-        <!-- Accessibility status -->
-        <androidx.cardview.widget.CardView
+        <!-- ── ACCESSIBILITY CARD ── -->
+        <LinearLayout
             android:id="@+id/cardAccessibility"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_card"
+            android:elevation="4dp">
+
+            <TextView
+                android:id="@+id/tvAccessibilityDot"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:background="@drawable/bg_dot_red"
+                android:layout_marginEnd="14dp"/>
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/tvAccessibilityDot"
-                    android:layout_width="12dp"
-                    android:layout_height="12dp"
-                    android:background="@drawable/bg_dot_red"
-                    android:layout_marginEnd="12dp"/>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Accessibility Service"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="#1A1F3A"/>
-
-                    <TextView
-                        android:id="@+id/tvAccessibilityStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Belum aktif — diperlukan untuk auto-jawab"
-                        android:textSize="12sp"
-                        android:textColor="#757575"/>
-                </LinearLayout>
-
-                <Button
-                    android:id="@+id/btnActivateAccessibility"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Aktifkan"
-                    android:textSize="12sp"
-                    android:backgroundTint="#6C63FF"/>
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
+                    android:text="Accessibility Service"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"/>
 
-        <!-- Provider Card -->
-        <androidx.cardview.widget.CardView
+                <TextView
+                    android:id="@+id/tvAccessibilityStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Diperlukan untuk auto-jawab"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnActivateAccessibility"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Aktifkan"
+                android:textSize="12sp"
+                android:textColor="@color/white"
+                android:background="@drawable/bg_button_accent"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:stateListAnimator="@null"/>
+        </LinearLayout>
+
+        <!-- ── PROVIDER CARD ── -->
+        <LinearLayout
             android:id="@+id/cardProvider"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="16dp"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/bg_card"
+            android:elevation="4dp"
+            android:clickable="true"
+            android:focusable="true">
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-                <LinearLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:text="AI Provider"
+                    android:textSize="11sp"
+                    android:textColor="@color/accent"
+                    android:textAllCaps="false"
+                    android:letterSpacing="0.06"/>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🤖 AI Provider"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="#1A1F3A"/>
-
-                    <TextView
-                        android:id="@+id/tvProviderName"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Auto (Pollinations gratis)"
-                        android:textSize="12sp"
-                        android:textColor="#757575"/>
-                </LinearLayout>
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@android:drawable/ic_menu_send"
-                    android:contentDescription="Arrow"/>
+                <TextView
+                    android:id="@+id/tvProviderName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Auto — Pollinations gratis"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginTop="3dp"/>
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="›"
+                android:textSize="22sp"
+                android:textColor="@color/text_muted"/>
+        </LinearLayout>
+
+        <!-- ── PLATFORM CHIPS ── -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Platform didukung"
+            android:textSize="11sp"
+            android:textColor="@color/text_muted"
+            android:letterSpacing="0.06"
+            android:layout_marginBottom="10dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="6dp">
+
+            <TextView android:layout_width="wrap_content" android:layout_height="32dp"
+                android:text="Wayground" android:textSize="12sp" android:textColor="@color/accent_glow"
+                android:background="@drawable/bg_chip" android:gravity="center"
+                android:paddingStart="12dp" android:paddingEnd="12dp" android:layout_marginEnd="8dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="32dp"
+                android:text="Google Form" android:textSize="12sp" android:textColor="@color/accent_glow"
+                android:background="@drawable/bg_chip" android:gravity="center"
+                android:paddingStart="12dp" android:paddingEnd="12dp" android:layout_marginEnd="8dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="32dp"
+                android:text="Kahoot" android:textSize="12sp" android:textColor="@color/accent_glow"
+                android:background="@drawable/bg_chip" android:gravity="center"
+                android:paddingStart="12dp" android:paddingEnd="12dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView android:layout_width="wrap_content" android:layout_height="32dp"
+                android:text="Quizizz" android:textSize="12sp" android:textColor="@color/accent_glow"
+                android:background="@drawable/bg_chip" android:gravity="center"
+                android:paddingStart="12dp" android:paddingEnd="12dp" android:layout_marginEnd="8dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="32dp"
+                android:text="Moodle" android:textSize="12sp" android:textColor="@color/accent_glow"
+                android:background="@drawable/bg_chip" android:gravity="center"
+                android:paddingStart="12dp" android:paddingEnd="12dp" android:layout_marginEnd="8dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="32dp"
+                android:text="+ Browser" android:textSize="12sp" android:textColor="@color/text_muted"
+                android:background="@drawable/bg_chip" android:gravity="center"
+                android:paddingStart="12dp" android:paddingEnd="12dp"/>
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>
